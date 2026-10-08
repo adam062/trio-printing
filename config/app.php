@@ -15,6 +15,10 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'whatsapp_phone' => env('TRIO_WHATSAPP_PHONE', '201282537892'),
+    'setup_key' => env('SETUP_KEY'),
+    'admin_password' => env('TRIO_ADMIN_PASSWORD'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
