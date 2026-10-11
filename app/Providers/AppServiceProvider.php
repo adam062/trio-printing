@@ -25,15 +25,18 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Blade::directive('sasset', function (string $expression): string {
-            // When PUBLIC_STORAGE_ROOT is set to 'public/storage', files are stored directly in public/storage
-            // We need to check if we're using the real folder or the symlink approach
-            if (env('PUBLIC_STORAGE_ROOT')) {
-                // Using real folder: path is already relative to public/
-                return "<?php echo asset($expression).(file_exists(public_path($expression)) ? '?v='.filemtime(public_path($expression)) : ''); ?>";
+            // The public disk root is base_path(env('PUBLIC_STORAGE_ROOT')) when set,
+            // otherwise storage_path('app/public') served via the storage:link symlink.
+            // The web-accessible URL prefix is the portion of that root below public/.
+            $storageRoot = env('PUBLIC_STORAGE_ROOT');
+            if ($storageRoot) {
+                $prefix = rtrim(preg_replace('#^public/?#', '', $storageRoot), '/');
+                $prefix = $prefix !== '' ? $prefix.'/' : '';
+            } else {
+                $prefix = 'storage/';
             }
 
-            // Using symlink: prepend storage/
-            return "<?php \$__sp = 'storage/'.($expression); echo asset(\$__sp).(file_exists(public_path(\$__sp)) ? '?v='.filemtime(public_path(\$__sp)) : ''); ?>";
+            return "<?php \$__sp = '{$prefix}'.($expression); echo asset(\$__sp).(file_exists(public_path(\$__sp)) ? '?v='.filemtime(public_path(\$__sp)) : ''); ?>";
         });
     }
 }
