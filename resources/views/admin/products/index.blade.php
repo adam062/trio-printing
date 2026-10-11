@@ -22,7 +22,7 @@
             <div class="alert error">{{ $errors->first() }}</div>
         @endif
 
-        <div class="admin-grid" style="grid-template-columns: 1.1fr 1.3fr;">
+        <div class="admin-grid product-management-grid">
             <!-- نموذج إضافة منتج جديد -->
             <article class="panel add-product-panel">
                 <div class="panel-title">
@@ -33,7 +33,13 @@
                     <span class="formula-badge">الوزن × الخامة × المضاعف</span>
                 </div>
 
-                <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data" class="product-form" data-product-form>
+                @php
+                    $filamentColorMap = $filaments->mapWithKeys(fn ($f) => [$f->id => collect($f->colorInventory())->pluck('name')->values()]);
+                    $currentFilament = $filaments->firstWhere('id', old('filament_id'));
+                    $selectedColors = old('color_options', []);
+                    $freeColors = old('color_options_free', '');
+                @endphp
+                <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data" class="product-form" data-product-form data-filament-colors='@json($filamentColorMap)'>
                     @csrf
                     <label>اسم المنتج
                         <input name="name" value="{{ old('name') }}" required maxlength="120" placeholder="مثال: Orbit Stand" />
@@ -63,14 +69,15 @@
                         </label>
                     </div>
 
-                    <div class="two-fields">
-                        <label>خيارات ألوان القطعة (افصل بفاصلة)
-                            <input name="color_options" value="{{ old('color_options') }}" placeholder="مثال: أسود، أبيض، برتقالي، أخضر" />
-                        </label>
-                        <label>تسمية خيار اللون للعميل
-                            <input name="color_label" value="{{ old('color_label', 'اللون المتاح') }}" placeholder="مثال: لون الهيكل، لون القاعدة، أو اللون" />
-                        </label>
-                    </div>
+                    @include('admin.products._color-options', [
+                        'currentFilament' => $currentFilament,
+                        'selectedColors' => $selectedColors,
+                        'freeColors' => $freeColors,
+                    ])
+
+                    <label>تسمية خيار اللون للعميل
+                        <input name="color_label" value="{{ old('color_label', 'اللون المتاح') }}" placeholder="مثال: لون الهيكل، لون القاعدة، أو اللون" />
+                    </label>
 
                     <div class="two-fields">
                         <label>الوزن بالجرام
@@ -87,15 +94,21 @@
 
                     <div class="price-preview">
                         <span>تكلفة الخامة: <b data-base-price>EGP 0.00</b></span>
-                        <strong>سعر البيع النهائي: <b data-selling-price>EGP 0.00</b></strong>
+                        <label class="final-price-field">سعر البيع النهائي:
+                            <span class="price-input-wrap">
+                                <input data-price-input name="price" type="number" min="0" step="0.01" value="{{ old('price') }}" placeholder="0.00" />
+                                <b>ج.م</b>
+                            </span>
+                        </label>
+                        <button type="button" class="price-auto-btn" data-price-auto hidden>↺ استخدام السعر المحسوب</button>
                         <small id="preview-calculation-note">الحساب المباشر: وزن القطعة × تكلفة جرام الخامة × المضاعف</small>
                     </div>
 
-                    <label class="image-upload">صورة المنتج الأساسية
-                        <small>JPG, PNG أو WEBP · حتى 4MB</small>
-                        <input data-image-input name="image" type="file" accept="image/jpeg,image/png,image/webp" />
-                        <img data-image-preview hidden alt="معاينة الصورة" />
+                    <label class="image-upload">صور المنتج (يمكن اختيار أكثر من صورة)
+                        <small>JPG, PNG أو WEBP · حتى 4MB لكل صورة · الأولى هي الغلاف</small>
+                        <input data-image-input name="images[]" type="file" multiple accept="image/jpeg,image/png,image/webp" />
                     </label>
+                    <div class="gallery-thumbs" data-image-preview-list></div>
 
                     <button class="lime-button" type="submit">نشر المنتج في المتجر <span>+</span></button>
                 </form>
@@ -120,10 +133,10 @@
 
                 <div class="product-admin-list">
                     @forelse($products as $product)
-                        <div class="product-admin-row" style="display:grid; grid-template-columns: 48px 1fr auto auto; gap:12px; align-items:center;">
+                        <div class="product-admin-row product-management-row" style="display:grid; grid-template-columns: 48px 1fr auto auto; gap:12px; align-items:center;">
                             <div class="admin-product-thumb">
                                 @if($product->image_path)
-                                    <img src="{{ asset('storage/'.$product->image_path) }}" alt="" />
+                                    <img src="@sasset($product->image_path)" alt="" />
                                 @else
                                     <span>▣</span>
                                 @endif

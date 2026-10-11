@@ -16,6 +16,11 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     'whatsapp_phone' => env('TRIO_WHATSAPP_PHONE', '201282537892'),
+    'social_links' => [
+        'instagram' => env('TRIO_INSTAGRAM_URL'),
+        'tiktok' => env('TRIO_TIKTOK_URL'),
+        'facebook' => env('TRIO_FACEBOOK_URL'),
+    ],
     'setup_key' => env('SETUP_KEY'),
     'admin_password' => env('TRIO_ADMIN_PASSWORD'),
 

@@ -50,7 +50,7 @@
 
         <div style="display:grid; gap:14px;">
             @forelse($quotes as $quote)
-                <div style="background:#0a1620; border:1px solid var(--line); border-radius:8px; padding:18px; display:grid; grid-template-columns: 1.2fr 1.3fr auto; gap:20px; align-items:center;">
+                <div class="quote-admin-card" style="background:#0a1620; border:1px solid var(--line); border-radius:8px; padding:18px; display:grid; grid-template-columns: 1.2fr 1.3fr auto; gap:20px; align-items:center;">
                     <div>
                         <span style="font-family:var(--mono); color:var(--lime); font-size:13px; font-weight:bold;">{{ $quote->quote_number }}</span>
                         <h3 style="margin:4px 0 2px 0; font-size:16px;">{{ $quote->customer_name }}</h3>
@@ -85,7 +85,7 @@
 
                     <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
                         @if($quote->file_path)
-                            <a href="{{ asset('storage/'.$quote->file_path) }}" download class="lime-button" style="padding:7px 14px; font-size:11px; height:auto; text-decoration:none;">
+                            <a href="{{ route('admin.custom_quotes.download', $quote) }}" class="lime-button" style="padding:7px 14px; font-size:11px; height:auto; text-decoration:none;">
                                 تحميل ملف 3D ↓
                             </a>
                         @endif

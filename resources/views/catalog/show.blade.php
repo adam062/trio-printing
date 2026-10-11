@@ -5,13 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#071019" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
+    @php
+      $inventoryColors = $product->filament?->colorInventory() ?? [];
+      $hasManagedColors = $product->filament?->hasManagedColorInventory() ?? false;
+      $selectedNames = $product->color_options ?? [];
+
+      if ($hasManagedColors) {
+          $filtered = $selectedNames === []
+              ? $inventoryColors
+              : array_values(array_filter($inventoryColors, fn ($color) => in_array($color['name'], $selectedNames, true)));
+          // Never hide every color because of a stale selection.
+          $productColors = $filtered === [] ? $inventoryColors : $filtered;
+      } else {
+          $productColors = collect($selectedNames)->map(fn ($color) => ['name' => $color, 'in_stock' => true])->all();
+      }
+
+      $isOutOfStock = ($product->filament && ! $product->filament->is_active)
+        || ($hasManagedColors && ! collect($inventoryColors)->contains(fn ($color) => $color['in_stock']));
+      $firstColor = collect($productColors)->first(fn ($color) => $color['in_stock'] && ! $isOutOfStock)['name'] ?? null;
+      $gallery = $product->gallery();
+    @endphp
     <title>{{ $product->name }} — TRIO 3D Printing</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('trio.css') }}" />
-    <link rel="stylesheet" href="{{ asset('store-overrides.css') }}" />
+    <link rel="stylesheet" href="@assetv('trio.css')" />
+    <link rel="stylesheet" href="@assetv('store-overrides.css')" />
     <style>
       .product-detail-wrap { max-width: 1280px; margin: 40px auto 100px; padding: 0 42px; }
       .breadcrumb { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 30px; display: flex; gap: 8px; }
@@ -19,7 +39,12 @@
       .breadcrumb a:hover { color: var(--lime); }
       .product-detail-grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 60px; align-items: start; }
       .product-hero-visual { position: relative; height: 520px; border-radius: 8px; overflow: hidden; background: linear-gradient(145deg, #101e29, #08121a); border: 1px solid var(--line); display: grid; place-items: center; }
-      .product-hero-visual img { width: 100%; height: 100%; object-fit: cover; }
+      .product-hero-visual img { width: 100%; height: 100%; padding: 16px; object-fit: contain; }
+      .product-gallery-thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+      .gallery-thumb-btn { width: 72px; height: 72px; padding: 0; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: #0c1822; cursor: pointer; transition: border-color .2s, transform .2s; }
+      .gallery-thumb-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .gallery-thumb-btn:hover { transform: translateY(-2px); }
+      .gallery-thumb-btn.active { border-color: var(--lime); box-shadow: 0 0 12px rgba(200,242,40,.25); }
       .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 25px 0; }
       .spec-card { background: #0c1822; border: 1px solid var(--line); padding: 14px; border-radius: 6px; }
       .spec-card span { display: block; font-size: 10px; font-family: var(--mono); color: var(--muted); margin-bottom: 5px; }
@@ -37,21 +62,7 @@
     <div class="noise"></div>
     <div class="glow glow-a"></div><div class="glow glow-b"></div>
 
-    <header class="site-header">
-      <a class="brand" href="{{ route('storefront') }}" aria-label="TRIO homepage">
-        <span class="brand-mark"><i></i><i></i><i></i></span><span>TRIO</span>
-      </a>
-      <nav class="nav-links" aria-label="التنقل الرئيسي">
-        <a href="{{ route('storefront') }}">الرئيسية</a>
-        <a href="{{ route('catalog.index') }}">المنتجات</a>
-        <a href="{{ route('storefront') }}#custom">اطبع فكرتك</a>
-        <a href="{{ route('storefront') }}#about">فكرة TRIO</a>
-      </nav>
-      <div class="header-actions">
-        <button class="icon-button theme-button" aria-label="تبديل المظهر"><span>☼</span></button>
-        <button class="cart-button" id="open-cart"><span class="cart-count" id="cart-count">0</span><span>سلة الطلبات</span><span class="arrow">↙</span></button>
-      </div>
-    </header>
+    @include('partials.store-header', ['activeNav' => 'catalog'])
 
     <main class="product-detail-wrap">
       <div class="breadcrumb">
@@ -62,11 +73,26 @@
 
       <div class="product-detail-grid">
         <!-- المعرض البصري للمنتج -->
-        <div class="product-hero-visual">
-          @if($product->image_path)
-            <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" />
-          @else
-            <div class="product-visual stand"><span></span><i></i><b></b></div>
+        <div>
+          <div class="product-hero-visual">
+            @if($product->coverImage())
+              <img id="product-main-image" src="@sasset($product->coverImage())" alt="{{ $product->name }}" />
+            @else
+              <div class="product-visual stand"><span></span><i></i><b></b></div>
+            @endif
+          </div>
+
+          @if(count($gallery) > 1)
+            <div class="product-gallery-thumbs">
+              @foreach($gallery as $index => $path)
+                <button type="button"
+                        class="gallery-thumb-btn {{ $index === 0 ? 'active' : '' }}"
+                        data-full="@sasset($path)"
+                        aria-label="عرض الصورة {{ $index + 1 }}">
+                  <img src="@sasset($path)" alt="{{ $product->name }} - صورة {{ $index + 1 }}" />
+                </button>
+              @endforeach
+            </div>
           @endif
         </div>
 
@@ -132,11 +158,10 @@
                 return '#38bdf8';
               }
             }
-            $firstColor = !empty($product->color_options) && is_array($product->color_options) && count($product->color_options) > 0 ? $product->color_options[0] : null;
           @endphp
 
           <!-- خيارات الألوان والتخصيص للمنتج -->
-          @if(!empty($product->color_options) && is_array($product->color_options) && count($product->color_options) > 0)
+          @if($productColors !== [])
             <div class="product-color-options" style="margin-bottom: 24px; padding: 18px; background: rgba(9, 21, 30, 0.7); border: 1px solid var(--line); border-radius: 8px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <span style="font-size: 13px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;">
@@ -148,22 +173,32 @@
                 </span>
               </div>
               <div class="color-pills-wrap" style="display: flex; flex-wrap: wrap; gap: 10px;">
-                @foreach($product->color_options as $idx => $color)
-                  @php $dotColor = getVariantSwatchColor($color); @endphp
-                  <button type="button" 
-                          class="color-pill-btn {{ $idx === 0 ? 'active' : '' }}" 
-                          data-color="{{ $color }}"
-                          style="padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; border: 1px solid {{ $idx === 0 ? 'var(--lime)' : 'rgba(255,255,255,0.14)' }}; background: {{ $idx === 0 ? 'rgba(74, 222, 128, 0.14)' : '#0d1821' }}; color: {{ $idx === 0 ? '#fff' : '#c5d4d8' }}; display: flex; align-items: center; gap: 8px; box-shadow: {{ $idx === 0 ? '0 0 10px rgba(74, 222, 128, 0.2)' : 'none' }};">
+                @foreach($productColors as $idx => $color)
+                  @php
+                    $dotColor = getVariantSwatchColor($color['name']);
+                    $colorInStock = $color['in_stock'] && ! $isOutOfStock;
+                    $colorIsSelected = $colorInStock && $color['name'] === $firstColor;
+                  @endphp
+                  <button type="button"
+                          class="color-pill-btn {{ $colorIsSelected ? 'active' : '' }}"
+                          data-color="{{ $color['name'] }}"
+                          @disabled(! $colorInStock)
+                          style="padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: {{ $colorInStock ? 'pointer' : 'not-allowed' }}; transition: all 0.2s ease; border: 1px solid {{ $colorIsSelected ? 'var(--lime)' : 'rgba(255,255,255,0.14)' }}; background: {{ $colorIsSelected ? 'rgba(74, 222, 128, 0.14)' : '#0d1821' }}; color: {{ $colorIsSelected ? '#fff' : '#c5d4d8' }}; opacity: {{ $colorInStock ? '1' : '0.5' }}; display: flex; align-items: center; gap: 8px; box-shadow: {{ $colorIsSelected ? '0 0 10px rgba(74, 222, 128, 0.2)' : 'none' }};">
                     <span class="color-dot" style="width: 12px; height: 12px; border-radius: 50%; background: {{ $dotColor }}; border: 1px solid rgba(255,255,255,0.4); display: inline-block; flex-shrink: 0;"></span>
-                    <span>{{ $color }}</span>
-                    <span class="check-mark" style="font-size: 11px; color: var(--lime); display: {{ $idx === 0 ? 'inline' : 'none' }};">✓</span>
+                    <span>{{ $color['name'] }}</span>
+                    @if(! $colorInStock)
+                      <small>نفد</small>
+                    @endif
+                    <span class="check-mark" style="font-size: 11px; color: var(--lime); display: {{ $colorIsSelected ? 'inline' : 'none' }};">✓</span>
                   </button>
                 @endforeach
               </div>
               <p style="margin: 10px 0 0 0; font-size: 11px; color: var(--muted); line-height: 1.6;">
-                💡 القطعة قابلة للتخصيص بالألوان الموضحة أعلاه وسيتم طباعتها وتجهيزها باختيارك بدقة عالية.
+                💡 الألوان المتاحة حاليًا ظاهرة هنا، واللون المنفد لا يمكن طلبه.
               </p>
             </div>
+          @elseif($hasManagedColors)
+            <p class="checkout-note" style="color:#ff8e7a;">نفدت جميع ألوان هذه الخامة حاليًا.</p>
           @endif
 
           <!-- اختيار الكمية والإضافة للسلة -->
@@ -175,9 +210,9 @@
           </div>
 
           <div style="display:flex; gap:14px; flex-wrap:wrap;">
-            <button class="button button-primary" id="detail-add-btn" style="flex:1; justify-content:center; padding:16px;" 
-                    data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}">
-              أضف لسلة الطلبات <span>+</span>
+                <button class="button button-primary" id="detail-add-btn" style="flex:1; justify-content:center; padding:16px;"
+                  data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="@if($product->coverImage())@sasset($product->coverImage())@endif" @disabled($isOutOfStock)>
+              {{ $isOutOfStock ? 'نفد المخزون' : 'أضف لسلة الطلبات' }} <span>+</span>
             </button>
 
             @php
@@ -188,8 +223,8 @@
               $initialMsg .= " بسعر EGP ".number_format($product->price, 2);
               $waMsg = urlencode($initialMsg);
             @endphp
-            <a href="https://wa.me/{{ config('app.whatsapp_phone', '201282537892') }}?text={{ $waMsg }}" id="quick-wa-btn" target="_blank" class="button button-quiet" style="border-color:#25d366; color:#25d366; justify-content:center; padding:16px;">
-              طلب سريع عبر واتساب 💬
+            <a href="https://wa.me/{{ config('app.whatsapp_phone', '201282537892') }}?text={{ $waMsg }}" id="quick-wa-btn" target="_blank" rel="noopener noreferrer" class="button button-quiet" style="border-color:#25d366; color:#25d366; justify-content:center; padding:16px;">
+              استفسار عبر واتساب 💬
             </a>
           </div>
         </div>
@@ -206,12 +241,18 @@
             <a href="{{ route('catalog.index') }}" class="text-link">شاهد الكتالوج بالكامل <span>↙</span></a>
           </div>
 
-          <div class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+          <div class="product-grid related-products" aria-label="منتجات أخرى قد تعجبك" tabindex="0">
             @foreach($relatedProducts as $rel)
+              @php
+                $relatedInventory = $rel->filament?->colorInventory() ?? [];
+                $relatedHasManagedInventory = $rel->filament?->hasManagedColorInventory() ?? false;
+                $relatedIsOutOfStock = ($rel->filament && ! $rel->filament->is_active)
+                  || ($relatedHasManagedInventory && ! collect($relatedInventory)->contains(fn ($color) => $color['in_stock']));
+              @endphp
               <article class="product-card product-lime" style="height:380px;">
                 <a href="{{ route('catalog.show', $rel) }}" style="position:absolute; inset:0; z-index:1;"></a>
                 @if($rel->image_path)
-                  <img class="product-uploaded-image" src="{{ asset('storage/'.$rel->image_path) }}" alt="{{ $rel->name }}" />
+                  <img class="product-uploaded-image" src="@sasset($rel->image_path)" alt="{{ $rel->name }}" />
                 @else
                   <div class="product-visual stand"><span></span><i></i><b></b></div>
                 @endif
@@ -219,7 +260,13 @@
                   <div><h3>{{ $rel->name }}</h3><p>{{ $rel->weight_grams }}g</p></div>
                   <strong>EGP {{ number_format((float) $rel->price, 2) }}</strong>
                 </div>
-                <button class="add-button" style="z-index:3;" data-id="{{ $rel->id }}" data-name="{{ $rel->name }}" data-price="{{ $rel->price }}">أضف للسلة <span>+</span></button>
+                @if($relatedIsOutOfStock)
+                  <button class="add-button" style="z-index:3;" disabled>نفد المخزون</button>
+                @elseif($relatedHasManagedInventory)
+                  <a class="add-button" style="z-index:3;" href="{{ route('catalog.show', $rel) }}">اختار اللون <span>↗</span></a>
+                @else
+                  <button class="add-button" style="z-index:3;" data-id="{{ $rel->id }}" data-name="{{ $rel->name }}" data-price="{{ $rel->price }}">أضف للسلة <span>+</span></button>
+                @endif
               </article>
             @endforeach
           </div>
@@ -227,47 +274,10 @@
       @endif
     </main>
 
-    <footer>
-      <div class="footer-mark"><span class="brand-mark"><i></i><i></i><i></i></span>TRIO</div>
-      <p>ثلاثة أصدقاء يصنعون أشياء أفضل.</p>
-      <div style="display:flex; gap:16px; align-items:center;">
-        <span>© 2026 TRIO 3D PRINTING</span>
-        <a href="{{ route('admin.login') }}" style="color:rgba(255,255,255,0.18); font-size:10px; text-decoration:none;">لوحة الإدارة</a>
-      </div>
-    </footer>
+    @include('partials.store-footer')
 
     <!-- سلة الطلبات -->
-    <aside class="cart-drawer" id="cart-drawer" aria-hidden="true">
-      <div class="drawer-head">
-        <div><span class="kicker">YOUR BUILD</span><h3>سلة الطلبات</h3></div>
-        <button id="close-cart">×</button>
-      </div>
-      <div class="cart-items" id="cart-items">
-        <div class="empty-cart"><span>◌</span><p>لسه مفيش حاجة في السلة.</p></div>
-      </div>
-      <form id="checkout-form" class="checkout-form">
-        <label>الاسم بالكامل
-          <input name="customer_name" required autocomplete="name" placeholder="محمد أحمد" />
-        </label>
-        <label>رقم الموبايل
-          <input name="phone" required autocomplete="tel" inputmode="tel" placeholder="01012345678" pattern="(\+?20|0)?1[0125][0-9]{8}" />
-        </label>
-        <label>عنوان التوصيل بالتفصيل
-          <input name="address" required autocomplete="street-address" placeholder="المحافظة، المدينة، اسم الشارع ورقم العمارة" />
-        </label>
-        <label>البريد الإلكتروني <small>اختياري</small>
-          <input name="email" type="email" autocomplete="email" placeholder="name@example.com" />
-        </label>
-        <label>ملاحظات إضافية <small>اختياري</small>
-          <textarea name="notes" rows="2" placeholder="أي تعليمات للتوصيل"></textarea>
-        </label>
-        <p class="checkout-note">الدفع عند الاستلام أو فودافون كاش بعد تأكيد الطلب معك.</p>
-        <div class="cart-footer">
-          <p>الإجمالي <strong id="cart-total">EGP 0</strong></p>
-          <button class="button button-primary" id="checkout" type="submit">تأكيد وإرسال الطلب <span>↙</span></button>
-        </div>
-      </form>
-    </aside>
+    @include('partials.cart-popup')
 
     <div class="backdrop" id="backdrop"></div>
     <div class="toast" id="toast">تمت إضافة القطعة للسلة <span>✓</span></div>
@@ -279,7 +289,7 @@
         whatsappPhone: '{{ config('app.whatsapp_phone', '201282537892') }}'
       };
     </script>
-    <script src="{{ asset('trio.js') }}"></script>
+    <script src="@assetv('trio.js')"></script>
     <script>
       // إدارة اختيار ألوان وتخصيص المنتج
       let selectedColor = @json($firstColor);
@@ -335,8 +345,9 @@
       document.getElementById('qty-plus').addEventListener('click', () => { qty++; qtyVal.textContent = qty; });
       document.getElementById('qty-minus').addEventListener('click', () => { if(qty > 1) qty--; qtyVal.textContent = qty; });
       addBtn.addEventListener('click', () => {
+        if (addBtn.disabled) return;
         for(let i=0; i<qty; i++) {
-          addItem(addBtn.dataset.id, addBtn.dataset.name, addBtn.dataset.price, selectedColor);
+          addItem(addBtn.dataset.id, addBtn.dataset.name, addBtn.dataset.price, selectedColor, addBtn.dataset.image);
         }
       });
     </script>

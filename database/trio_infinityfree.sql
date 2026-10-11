@@ -40,6 +40,7 @@ CREATE TABLE `filaments` (
   `spool_weight_grams` decimal(10,2) NOT NULL DEFAULT 1000.00,
   `cost_per_gram` decimal(10,4) NOT NULL,
   `color_hint` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '#c8f228',
+  `available_colors` json DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,

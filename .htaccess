@@ -7,7 +7,40 @@
     RewriteRule ^package(-lock)?\.json - [F,L,NC]
     RewriteRule ^artisan - [F,L,NC]
 
+    # Serve Laravel public-disk files without a symlink (InfinityFree blocks storage:link).
+    # When PUBLIC_STORAGE_ROOT=public/storage, files are stored directly in public/storage.
+    # The catch-all rule below rewrites /storage/... to /public/storage/... automatically.
+
     # Rewrite all traffic to public directory if not already there
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+# Increase PHP upload limits
+<IfModule mod_php.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+</IfModule>
+
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+</IfModule>
+
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+</IfModule>
+
+# Ensure proper MIME types for images
+<IfModule mod_mime.c>
+    AddType image/jpeg .jpg .jpeg
+    AddType image/png .png
+    AddType image/webp .webp
 </IfModule>

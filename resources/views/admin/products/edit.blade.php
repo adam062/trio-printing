@@ -20,8 +20,14 @@
         @endif
 
         <div style="max-width:700px; margin:0 auto;">
+            @php
+                $filamentColorMap = $filaments->mapWithKeys(fn ($f) => [$f->id => collect($f->colorInventory())->pluck('name')->values()]);
+                $currentFilament = $filaments->firstWhere('id', old('filament_id', $product->filament_id));
+                $selectedColors = old('color_options', $product->color_options ?? []);
+                $freeColors = old('color_options_free', $product->filament?->hasManagedColorInventory() ? '' : implode('، ', $product->color_options ?? []));
+            @endphp
             <article class="panel">
-                <form method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data" class="product-form" data-product-form>
+                <form method="POST" action="{{ route('admin.products.update', $product) }}" enctype="multipart/form-data" class="product-form" data-product-form data-filament-colors='@json($filamentColorMap)'>
                     @csrf
                     @method('PUT')
 
@@ -53,14 +59,15 @@
                         </label>
                     </div>
 
-                    <div class="two-fields">
-                        <label>خيارات ألوان القطعة (افصل بفاصلة)
-                            <input name="color_options" value="{{ old('color_options', is_array($product->color_options) ? implode('، ', $product->color_options) : '') }}" placeholder="مثال: أسود، أبيض، برتقالي، أخضر" />
-                        </label>
-                        <label>تسمية خيار اللون للعميل
-                            <input name="color_label" value="{{ old('color_label', $product->color_label ?? 'اللون المتاح') }}" placeholder="مثال: لون الهيكل، لون القاعدة" />
-                        </label>
-                    </div>
+                    @include('admin.products._color-options', [
+                        'currentFilament' => $currentFilament,
+                        'selectedColors' => $selectedColors,
+                        'freeColors' => $freeColors,
+                    ])
+
+                    <label>تسمية خيار اللون للعميل
+                        <input name="color_label" value="{{ old('color_label', $product->color_label ?? 'اللون المتاح') }}" placeholder="مثال: لون الهيكل، لون القاعدة" />
+                    </label>
 
                     <div class="two-fields">
                         <label>الوزن بالجرام
@@ -77,21 +84,34 @@
 
                     <div class="price-preview">
                         <span>تكلفة الخامة المحسوبة: <b data-base-price>EGP {{ number_format($product->base_price, 2) }}</b></span>
-                        <strong>سعر البيع النهائي: <b data-selling-price>EGP {{ number_format($product->price, 2) }}</b></strong>
-                        <small id="preview-calculation-note">السعر يتحدث تلقائياً حسب الخامة والوزن والمضاعف</small>
+                        <label class="final-price-field">سعر البيع النهائي:
+                            <span class="price-input-wrap">
+                                <input data-price-input name="price" type="number" min="0" step="0.01" value="{{ old('price', (float) $product->price) }}" placeholder="0.00" />
+                                <b>ج.م</b>
+                            </span>
+                        </label>
+                        <button type="button" class="price-auto-btn" data-price-auto hidden>↺ استخدام السعر المحسوب</button>
+                        <small id="preview-calculation-note">السعر يتحدث تلقائياً حسب الخامة والوزن والمضاعف، ويمكنك تعديله يدوياً</small>
                     </div>
 
-                    <div style="display:flex; gap:15px; align-items:center;">
-                        @if($product->image_path)
-                            <div style="width:70px; height:70px; border-radius:4px; overflow:hidden; background:#10202a; border:1px solid #2b4049;">
-                                <img src="{{ asset('storage/'.$product->image_path) }}" alt="" style="width:100%; height:100%; object-fit:cover;" />
-                            </div>
-                        @endif
-                        <label class="image-upload" style="flex:1;">تغيير صورة المنتج
-                            <small>اتركها فارغة للاحتفاظ بالصورة الحالية</small>
-                            <input data-image-input name="image" type="file" accept="image/jpeg,image/png,image/webp" />
-                            <img data-image-preview hidden alt="معاينة الصورة" />
+                    <div class="product-gallery-editor">
+                        <strong>صور المنتج ({{ count($product->gallery()) }}) — الأولى هي الغلاف</strong>
+                        <div class="gallery-thumbs">
+                            @foreach($product->gallery() as $path)
+                                <label class="gallery-thumb">
+                                    <img src="@sasset($path)" alt="" />
+                                    <span class="gallery-remove">
+                                        <input type="checkbox" name="remove_images[]" value="{{ $path }}" />
+                                        حذف
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <label class="image-upload">إضافة صور جديدة (يمكن اختيار أكثر من صورة)
+                            <small>الصورة الأولى في الترتيب تصبح غلاف المنتج في الكتالوج</small>
+                            <input data-image-input name="images[]" type="file" multiple accept="image/jpeg,image/png,image/webp" />
                         </label>
+                        <div class="gallery-thumbs" data-image-preview-list></div>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; margin-top:10px;">

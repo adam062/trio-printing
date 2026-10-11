@@ -22,7 +22,7 @@
             <div class="alert error">{{ $errors->first() }}</div>
         @endif
 
-        <div style="display:grid; grid-template-columns: 1fr 1.4fr; gap:25px;">
+        <div class="admin-columns-grid">
             <!-- إضافة حساب مشرف جديد -->
             <article class="panel">
                 <div class="panel-title">

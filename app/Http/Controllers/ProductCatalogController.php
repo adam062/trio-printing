@@ -52,7 +52,7 @@ class ProductCatalogController extends Controller
 
         $product->load('filament');
 
-        $relatedProducts = Product::query()
+        $relatedProducts = Product::query()->with('filament')
             ->where('is_active', true)
             ->where('id', '!=', $product->id)
             ->take(4)

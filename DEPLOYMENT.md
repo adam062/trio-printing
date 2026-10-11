@@ -68,35 +68,52 @@
 3. ارفع محتويات المشروع بالكامل داخل `htdocs`.
 4. يحتوي المشروع الآن على ملف `.htaccess` رئيسي جاهز يقوم تلقائياً بإعادة توجيه الزوار إلى مجلد `public` وحماية ملف `.env`.
 
+> **مهم جدًا لاستضافة InfinityFree:**
+> - لا يتوفر أمر `composer install` على الاستضافة، لذلك **يجب رفع مجلد `vendor/` كاملاً** مع المشروع (إنشاؤه محليًا ثم رفعه).
+> - مجلد `node_modules/` **غير مطلوب** (كل ملفات التصميم جاهزة داخل `public/`) — لا ترفعه لتوفير المساحة والوقت.
+> - انسخ `.env.production` إلى `.env` على الاستضافة ثم عدّل قيم قاعدة البيانات و`APP_URL`.
+
+> **إذا لم تظهر صور المنتجات (خطأ 404):** بعض خوادم InfinityFree تمنع إنشاء الروابط الرمزية (symlink) التي يعتمد عليها `storage:link`. الحل: أضف السطر التالي إلى `.env` لرفع الصور داخل مجلد عام حقيقي بدلاً من الرابط الرمزي:
+> ```env
+> PUBLIC_STORAGE_ROOT=public/storage
+> ```
+
+
 ### الخطوة الثالثة: ضبط ملف `.env`
 1. أنشئ أو عدّل ملف `.env` داخل `htdocs` بالبيانات الحقيقية التي حصلت عليها من InfinityFree:
    ```env
    APP_NAME="TRIO 3D Printing"
    APP_ENV=production
    APP_DEBUG=false
-   APP_URL=http://your-subdomain.infinityfreeapp.com
+   APP_URL=http://trio.xo.je/
 
    DB_CONNECTION=mysql
-   DB_HOST=sqlXXX.infinityfree.com
-   DB_PORT=3306
-   DB_DATABASE=epiz_XXXXXX_trio
-   DB_USERNAME=epiz_XXXXXX
-   DB_PASSWORD=your_account_password
+  DB_HOST=sql202.infinityfree.com
+  DB_PORT=3306
+  DB_DATABASE=if0_43124659_production
+  DB_USERNAME=if0_43124659
+  DB_PASSWORD=lAiyEPc0oa2YHJ
 
-   SETUP_KEY=ضع_مفتاحاً_عشوائياً_وفريداً_هنا
-   TRIO_ADMIN_PASSWORD=ضع_كلمة_مرور_قوية_وفريدة_هنا
+   SETUP_KEY=test
+   TRIO_ADMIN_PASSWORD=ona93
+   TRIO_WHATSAPP_PHONE=201282537892
+   TRIO_INSTAGRAM_URL=https://www.instagram.com/_tr_rio_?stkn=eWNkaXpteWMxczRn&utm_source=qr
+   TRIO_TIKTOK_URL=www.tiktok.com/@_tr_io_
+   TRIO_FACEBOOK_URL=
    ```
 
 ### طريقة بديلة لتجهيز قاعدة البيانات عبر المتصفح (Web Installer):
 إذا لم ترغب في استخدام Import في phpMyAdmin، اضبط `SETUP_KEY` و`TRIO_ADMIN_PASSWORD` بقيم عشوائية وفريدة في `.env`، ثم افتح `/setup?key=<your-SETUP_KEY>`. سيشغّل الموقع الـ Migrations والـ Seeders دون عرض كلمة المرور في الصفحة.
 
+لإظهار حسابات التواصل في أسفل صفحات المتجر، ضع روابط الحسابات الفعلية في `TRIO_INSTAGRAM_URL` و`TRIO_TIKTOK_URL` و`TRIO_FACEBOOK_URL`. يظهر واتساب باستخدام `TRIO_WHATSAPP_PHONE`. الروابط غير المضبوطة لا تظهر.
+
 ---
 
 ## 4. قائمة الفحص بعد الرفع (Post-Deployment Checklist)
 
-1. افتح الصفحة الرئيسية `/` وتأكد من ظهور المنتجات، وجرب سحب ملف STL بقسم "اطبع فكرتك".
+1. افتح الصفحة الرئيسية `/` وتأكد من ظهور المنتجات، ثم جرّب رفع ملف STL من صفحة `/custom-print`.
 2. افتح `/admin/login` وسجل الدخول باستخدام:
    - البريد: `admin@trio.local`
    - كلمة المرور التي ضبطتها في `TRIO_ADMIN_PASSWORD`
-3. من لوحة الإدارة، ادخل على قسم **🧵 خامات الفيلمنت** وعدّل سعر بكرة PLA+ بحسب السعر الفعلي لديك في مصر.
+3. من صفحة الخامات في لوحة الإدارة، حدّث الأسعار وأضف ألوان كل خامة وفعّل/أوقف المتاح منها؛ أوقف الخامة بالكامل عند نفادها. لن يقبل المتجر طلب لون أو خامة غير متاحة.
 4. أرسل طلباً تجريبياً من المتجر وتأكد من ظهوره فوراً في جدول الطلبات مع العنوان الكامل والمنتجات.

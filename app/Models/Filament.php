@@ -13,6 +13,7 @@ class Filament extends Model
         'spool_weight_grams',
         'cost_per_gram',
         'color_hint',
+        'available_colors',
         'is_active',
     ];
 
@@ -22,8 +23,43 @@ class Filament extends Model
             'spool_price' => 'decimal:2',
             'spool_weight_grams' => 'decimal:2',
             'cost_per_gram' => 'decimal:4',
+            'available_colors' => 'array',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * @return array<int, array{name: string, in_stock: bool}>
+     */
+    public function colorInventory(): array
+    {
+        return collect($this->available_colors ?? [])
+            ->map(function ($color): ?array {
+                if (is_string($color)) {
+                    $name = trim($color);
+
+                    return $name === '' ? null : ['name' => $name, 'in_stock' => true];
+                }
+
+                if (! is_array($color) || ! is_string($color['name'] ?? null)) {
+                    return null;
+                }
+
+                $name = trim($color['name']);
+
+                return $name === '' ? null : [
+                    'name' => $name,
+                    'in_stock' => (bool) ($color['in_stock'] ?? false),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    public function hasManagedColorInventory(): bool
+    {
+        return $this->available_colors !== null;
     }
 
     public function products(): HasMany

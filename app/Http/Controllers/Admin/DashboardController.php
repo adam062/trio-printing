@@ -25,11 +25,19 @@ class DashboardController extends Controller
             ->selectRaw('COALESCE(SUM(weight_grams * quantity), 0) as total_weight')
             ->value('total_weight');
 
-        $filamentsCount = Filament::count();
+        $filamentStats = Filament::query()
+            ->selectRaw('COUNT(*) as total_count')
+            ->selectRaw('SUM(CASE WHEN is_active = ? THEN 1 ELSE 0 END) as active_count', [true])
+            ->selectRaw('AVG(CASE WHEN is_active = ? THEN cost_per_gram END) as average_active_cost_per_gram', [true])
+            ->first();
+
+        $filamentsCount = (int) $filamentStats->total_count;
+        $activeFilamentsCount = (int) $filamentStats->active_count;
+        $inactiveFilamentsCount = $filamentsCount - $activeFilamentsCount;
         $productsCount = Product::count();
         $newQuotesCount = CustomQuote::query()->where('status', 'new')->count();
 
-        $avgCostPerGram = Filament::avg('cost_per_gram') ?: 0.675;
+        $avgCostPerGram = (float) ($filamentStats->average_active_cost_per_gram ?? 0);
         $materialCost = $soldGrams * (float) $avgCostPerGram;
 
         return view('admin.dashboard', [
@@ -40,6 +48,8 @@ class DashboardController extends Controller
             'soldGrams' => $soldGrams,
             'materialCost' => $materialCost,
             'filamentsCount' => $filamentsCount,
+            'activeFilamentsCount' => $activeFilamentsCount,
+            'inactiveFilamentsCount' => $inactiveFilamentsCount,
             'productsCount' => $productsCount,
             'newQuotesCount' => $newQuotesCount,
         ]);

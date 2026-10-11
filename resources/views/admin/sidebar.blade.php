@@ -4,39 +4,41 @@
     </a>
     <p class="sidebar-label">لوحة التشغيل</p>
 
-    <a class="side-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
-        ◫ <span>نظرة عامة</span>
-    </a>
-
-    @if(auth()->user()->canAccess('products'))
-        <a class="side-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}">
-            □ <span>إدارة المنتجات</span>
+    <nav class="admin-sidebar-nav" aria-label="أقسام لوحة الإدارة">
+        <a class="side-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
+            ◫ <span>نظرة عامة</span>
         </a>
-    @endif
 
-    @if(auth()->user()->canAccess('filaments'))
-        <a class="side-link {{ request()->routeIs('admin.filaments.*') ? 'active' : '' }}" href="{{ route('admin.filaments.index') }}">
-            🧵 <span>خامات الفيلمنت</span>
-        </a>
-    @endif
+        @if(auth()->user()->canAccess('products'))
+            <a class="side-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}">
+                □ <span>إدارة المنتجات</span>
+            </a>
+        @endif
 
-    @if(auth()->user()->canAccess('orders'))
-        <a class="side-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}" href="{{ route('admin.orders.index') }}">
-            ◌ <span>طلبات المتجر</span>
-        </a>
-    @endif
+        @if(auth()->user()->canAccess('filaments'))
+            <a class="side-link {{ request()->routeIs('admin.filaments.*') ? 'active' : '' }}" href="{{ route('admin.filaments.index') }}">
+                🧵 <span>خامات الفيلمنت</span>
+            </a>
+        @endif
 
-    @if(auth()->user()->canAccess('quotes'))
-        <a class="side-link {{ request()->routeIs('admin.custom_quotes.*') ? 'active' : '' }}" href="{{ route('admin.custom_quotes.index') }}">
-            ↗ <span>تصاميم مخصصة</span>
-        </a>
-    @endif
+        @if(auth()->user()->canAccess('orders'))
+            <a class="side-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}" href="{{ route('admin.orders.index') }}">
+                ◌ <span>طلبات المتجر</span>
+            </a>
+        @endif
 
-    @if(auth()->user()->isSuperAdmin())
-        <a class="side-link {{ request()->routeIs('admin.admins.*') ? 'active' : '' }}" href="{{ route('admin.admins.index') }}">
-            👥 <span>المشرفين والصلاحيات</span>
-        </a>
-    @endif
+        @if(auth()->user()->canAccess('quotes'))
+            <a class="side-link {{ request()->routeIs('admin.custom_quotes.*') ? 'active' : '' }}" href="{{ route('admin.custom_quotes.index') }}">
+                ↗ <span>تصاميم مخصصة</span>
+            </a>
+        @endif
+
+        @if(auth()->user()->isSuperAdmin())
+            <a class="side-link {{ request()->routeIs('admin.admins.*') ? 'active' : '' }}" href="{{ route('admin.admins.index') }}">
+                👥 <span>المشرفين والصلاحيات</span>
+            </a>
+        @endif
+    </nav>
 
     <div class="sidebar-bottom">
         <div style="display:flex; justify-content:space-between; align-items:center;">

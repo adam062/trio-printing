@@ -44,6 +44,27 @@ class Product extends Model
         return $this->belongsTo(Filament::class);
     }
 
+    /**
+     * All product images in display order (falls back to the legacy single image).
+     *
+     * @return array<int, string>
+     */
+    public function gallery(): array
+    {
+        $gallery = array_values(array_filter($this->gallery_images ?? []));
+
+        if ($gallery !== []) {
+            return $gallery;
+        }
+
+        return $this->image_path ? [$this->image_path] : [];
+    }
+
+    public function coverImage(): ?string
+    {
+        return $this->gallery()[0] ?? null;
+    }
+
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);

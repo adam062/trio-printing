@@ -28,9 +28,34 @@ class OrderController extends Controller
         ]);
 
         $productIds = collect($data['cart'])->pluck('id')->unique();
-        $products = Product::query()->where('is_active', true)->whereIn('id', $productIds)->get()->keyBy('id');
+        $products = Product::query()->with('filament')->where('is_active', true)->whereIn('id', $productIds)->get()->keyBy('id');
 
         abort_if($products->count() !== $productIds->count(), 422, 'أحد المنتجات في سلتك لم يعد متاحًا أو تم إخفاؤه.');
+
+        foreach ($data['cart'] as $cartItem) {
+            $product = $products->get($cartItem['id']);
+            $filament = $product->filament;
+
+            abort_if($filament && ! $filament->is_active, 422, 'خامة أحد المنتجات نفدت من المخزون.');
+
+            $inventory = $filament?->colorInventory() ?? [];
+            if ($filament?->hasManagedColorInventory()) {
+                abort_unless(
+                    collect($inventory)->contains(fn (array $color) => $color['in_stock'] && $color['name'] === ($cartItem['color'] ?? null)),
+                    422,
+                    'اللون المختار لأحد المنتجات غير متاح حاليًا.'
+                );
+            }
+
+            $productColors = $product->color_options ?? [];
+            if ($productColors !== [] && ($cartItem['color'] ?? null) !== null) {
+                abort_unless(
+                    in_array($cartItem['color'], $productColors, true),
+                    422,
+                    'اللون المختار غير مرتبط بهذا المنتج.'
+                );
+            }
+        }
 
         return DB::transaction(function () use ($data, $products) {
             $items = collect($data['cart'])->map(function (array $cartItem) use ($products) {

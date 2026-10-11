@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FilamentController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomQuoteController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductCatalogController;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', StorefrontController::class)->name('storefront');
 Route::get('/products', [ProductCatalogController::class, 'index'])->name('catalog.index');
 Route::get('/products/{product}', [ProductCatalogController::class, 'show'])->name('catalog.show');
+Route::get('/custom-print', [CustomQuoteController::class, 'create'])->name('custom_print.create');
+Route::get('/checkout', CheckoutController::class)->name('checkout');
 
 // Public Action Routes
 Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:20,1')->name('orders.store');
@@ -62,6 +65,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Custom 3D Model Quotes (requires 'quotes' permission)
         Route::middleware('permission:quotes')->group(function () {
             Route::get('/custom-quotes', [AdminCustomQuoteController::class, 'index'])->name('custom_quotes.index');
+            Route::get('/custom-quotes/{quote}/download', [AdminCustomQuoteController::class, 'download'])->name('custom_quotes.download');
             Route::patch('/custom-quotes/{quote}/status', [AdminCustomQuoteController::class, 'update'])->name('custom_quotes.status');
             Route::delete('/custom-quotes/{quote}', [AdminCustomQuoteController::class, 'destroy'])->name('custom_quotes.destroy');
         });

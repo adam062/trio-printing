@@ -94,7 +94,7 @@
                     </div>
 
                     <!-- تفاصيل المنتجات والعنوان والملاحظات -->
-                    <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:20px; margin-top:14px; font-size:12px;">
+                    <div class="order-details-grid" style="display:grid; grid-template-columns: 1.4fr 1fr; gap:20px; margin-top:14px; font-size:12px;">
                         <div>
                             <p style="font-size:11px; color:var(--muted); margin:0 0 8px;">الأصناف المطلوبة ({{ $order->items->count() }}):</p>
                             <div style="display:grid; gap:6px;">

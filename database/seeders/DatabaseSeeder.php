@@ -31,6 +31,16 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        User::updateOrCreate(
+            ['email' => 'newadmin@trio.local'],
+            [
+                'name' => 'New Admin',
+                'password' => Hash::make('password123'),
+                'is_admin' => true,
+                'role' => 'super_admin',
+            ]
+        );
+
         // 2. Seed Filaments & Materials
         $this->call(FilamentSeeder::class);
 

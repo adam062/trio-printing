@@ -40,7 +40,12 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            // On hosts that forbid symlink() (e.g. InfinityFree), set
+            // PUBLIC_STORAGE_ROOT=public/storage in .env to serve uploads from a
+            // real web-accessible folder instead of relying on `storage:link`.
+            'root' => env('PUBLIC_STORAGE_ROOT')
+                ? base_path(env('PUBLIC_STORAGE_ROOT'))
+                : storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,

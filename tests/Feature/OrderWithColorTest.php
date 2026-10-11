@@ -20,6 +20,29 @@ class OrderWithColorTest extends TestCase
         $response->assertSee('trio-printer-chamber');
         $response->assertSee('CORE-XY · 320 mm/s');
         $response->assertSee('201282537892');
+        $response->assertSee(route('custom_print.create'));
+        $response->assertSee('aria-label="واتساب"', false);
+        $response->assertSee('aria-label="إنستجرام"', false);
+        $response->assertSee('aria-label="فيسبوك"', false);
+        $response->assertDontSee('id="quote-form"', false);
+        $response->assertDontSee('anim-spark', false);
+        $response->assertSeeInOrder([
+            'id="carousel-prev"',
+            'id="product-carousel"',
+            'id="carousel-next"',
+            'class="custom-print-promo section"',
+        ]);
+    }
+
+    public function test_checkout_page_renders_order_summary_and_customer_form()
+    {
+        $this->get(route('checkout'))
+            ->assertOk()
+            ->assertSee('id="checkout-main"', false)
+            ->assertSee('data-cart-items', false)
+            ->assertSee('name="customer_name"', false)
+            ->assertSee('name="phone"', false)
+            ->assertSee('id="checkout-success"', false);
     }
 
     public function test_product_page_displays_color_variant_pills_and_whatsapp_link()
@@ -51,7 +74,91 @@ class OrderWithColorTest extends TestCase
         $response->assertSee('color-pill-btn');
         $response->assertSee('برتقالي نيون');
         $response->assertSee('تخصيص لون الحامل');
+        $response->assertSee('استفسار عبر واتساب');
         $response->assertSee('201282537892');
+    }
+
+    public function test_custom_print_page_is_separate_and_uses_configured_social_links()
+    {
+        config()->set('app.social_links.instagram', 'https://instagram.com/trio-test');
+
+        $this->get(route('custom_print.create'))
+            ->assertOk()
+            ->assertSee('id="quote-form"', false)
+            ->assertSee('https://instagram.com/trio-test');
+
+        $this->get('/')
+            ->assertDontSee('id="quote-form"', false);
+    }
+
+    public function test_order_rejects_an_out_of_stock_filament_color()
+    {
+        $filament = Filament::create([
+            'name' => 'PLA+ managed colors',
+            'spool_price' => 750,
+            'spool_weight_grams' => 1000,
+            'cost_per_gram' => 0.75,
+            'available_colors' => [
+                ['name' => 'أسود', 'in_stock' => true],
+                ['name' => 'أحمر', 'in_stock' => false],
+            ],
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Managed-color product',
+            'filament_id' => $filament->id,
+            'weight_grams' => 80,
+            'base_price' => 60,
+            'multiplier' => 4,
+            'price' => 240,
+            'color_options' => ['أسود', 'أحمر'],
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'customer_name' => 'أحمد كمال',
+            'phone' => '01282537892',
+            'address' => 'القاهرة',
+            'cart' => [['id' => $product->id, 'quantity' => 1, 'color' => 'أحمر']],
+        ];
+
+        $this->postJson(route('orders.store'), $payload)
+            ->assertUnprocessable()
+            ->assertJson(['message' => 'اللون المختار لأحد المنتجات غير متاح حاليًا.']);
+
+        $payload['cart'][0]['color'] = 'أسود';
+        $this->postJson(route('orders.store'), $payload)->assertCreated();
+    }
+
+    public function test_order_rejects_products_when_the_whole_filament_is_out_of_stock()
+    {
+        $filament = Filament::create([
+            'name' => 'Inactive filament',
+            'spool_price' => 750,
+            'spool_weight_grams' => 1000,
+            'cost_per_gram' => 0.75,
+            'available_colors' => [['name' => 'أسود', 'in_stock' => true]],
+            'is_active' => false,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Unavailable product',
+            'filament_id' => $filament->id,
+            'weight_grams' => 80,
+            'base_price' => 60,
+            'multiplier' => 4,
+            'price' => 240,
+            'is_active' => true,
+        ]);
+
+        $this->postJson(route('orders.store'), [
+            'customer_name' => 'أحمد كمال',
+            'phone' => '01282537892',
+            'address' => 'القاهرة',
+            'cart' => [['id' => $product->id, 'quantity' => 1, 'color' => 'أسود']],
+        ])->assertUnprocessable()
+            ->assertJson(['message' => 'خامة أحد المنتجات نفدت من المخزون.']);
     }
 
     public function test_order_submission_with_variant_color_stores_color_and_displays_in_admin()

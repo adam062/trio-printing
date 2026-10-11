@@ -15,7 +15,7 @@ const saveCart = () => {
 const state = {
     cart: loadSavedCart(),
     quote: null,
-    selectedColor: 'أخضر ليموني (Lime)',
+    selectedColor: null,
     uploadedFile: null,
 };
 
@@ -23,42 +23,133 @@ const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
 const money = (amount) => `EGP ${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
+const navToggle = $('#nav-toggle');
+const siteHeader = $('.site-header');
+if (navToggle && siteHeader) {
+    const closeNav = () => {
+        siteHeader.classList.remove('nav-open');
+        navToggle.setAttribute('aria-expanded', 'false');
+        navToggle.setAttribute('aria-label', 'فتح القائمة');
+    };
+
+    navToggle.addEventListener('click', () => {
+        const isOpen = siteHeader.classList.toggle('nav-open');
+        navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        navToggle.setAttribute('aria-label', isOpen ? 'إغلاق القائمة' : 'فتح القائمة');
+    });
+
+    $$('.nav-links a').forEach((link) => link.addEventListener('click', closeNav));
+}
+
 function cartTotal() {
     return state.cart.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
 }
 
 function renderCart() {
-    const list = $('#cart-items');
-    if (!list) return;
     const count = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    const cartCountEl = $('#cart-count');
-    if (cartCountEl) cartCountEl.textContent = count;
-    const cartTotalEl = $('#cart-total');
-    if (cartTotalEl) cartTotalEl.textContent = money(cartTotal());
+    $$('[data-cart-count]').forEach((el) => { el.textContent = count; });
+    $$('[data-cart-total], #cart-total').forEach((el) => { el.textContent = money(cartTotal()); });
 
     if (!state.cart.length) {
-        list.innerHTML = '<div class="empty-cart"><span>◌</span><p>لسه مفيش حاجة في السلة.</p></div>';
-        return;
+        $$('[data-cart-items], #cart-items').forEach((list) => {
+            list.innerHTML = '<div class="empty-cart"><span>◌</span><p>لسه مفيش حاجة في السلة.</p></div>';
+        });
+    } else {
+        $$('[data-cart-items], #cart-items').forEach((list) => {
+            list.replaceChildren();
+            state.cart.forEach((item, index) => {
+                const row = document.createElement('article');
+                row.className = 'cart-item';
+
+                const thumb = document.createElement('div');
+                thumb.className = 'cart-thumb';
+                if (item.image) {
+                    const image = document.createElement('img');
+                    image.src = item.image;
+                    image.alt = '';
+                    thumb.append(image);
+                }
+
+                const details = document.createElement('div');
+                details.className = 'cart-item-details';
+                const name = document.createElement('h4');
+                name.textContent = item.name;
+                details.append(name);
+
+                if (item.color) {
+                    const color = document.createElement('small');
+                    color.className = 'cart-item-color';
+                    color.textContent = `اللون: ${item.color}`;
+                    details.append(color);
+                }
+
+                const price = document.createElement('p');
+                price.textContent = `${money(item.price)} · ${item.quantity} ×`;
+                details.append(price);
+
+                const actions = document.createElement('div');
+                actions.className = 'cart-item-actions';
+                const decrease = document.createElement('button');
+                decrease.type = 'button';
+                decrease.dataset.cartAction = 'decrease';
+                decrease.dataset.cartIndex = index;
+                decrease.setAttribute('aria-label', 'تقليل الكمية');
+                decrease.textContent = '-';
+
+                const quantity = document.createElement('span');
+                quantity.textContent = item.quantity;
+
+                const increase = document.createElement('button');
+                increase.type = 'button';
+                increase.dataset.cartAction = 'increase';
+                increase.dataset.cartIndex = index;
+                increase.setAttribute('aria-label', 'زيادة الكمية');
+                increase.textContent = '+';
+
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'cart-item-remove';
+                remove.dataset.cartAction = 'remove';
+                remove.dataset.cartIndex = index;
+                remove.setAttribute('aria-label', 'حذف المنتج');
+                remove.textContent = '×';
+
+                actions.append(decrease, quantity, increase, remove);
+                row.append(thumb, details, actions);
+                list.append(row);
+            });
+        });
     }
 
-    list.innerHTML = state.cart.map((item, index) => `
-        <div class="cart-item">
-          <div class="cart-thumb"></div>
-          <div>
-            <h4>${item.name}</h4>
-            ${item.color ? `<small style="color:var(--lime); display:block; font-size:10px; margin-top:2px;">اللون: ${item.color}</small>` : ''}
-            <p>${money(item.price)} × ${item.quantity}</p>
-          </div>
-          <button data-remove="${index}" aria-label="حذف">×</button>
-        </div>
-    `).join('');
+    $$('[data-checkout-link]').forEach((link) => {
+        link.setAttribute('aria-disabled', state.cart.length ? 'false' : 'true');
+        link.tabIndex = state.cart.length ? 0 : -1;
+    });
+    const checkoutButton = $('#checkout');
+    if (checkoutButton) checkoutButton.disabled = state.cart.length === 0;
+}
 
-    $$('[data-remove]').forEach((button) => button.addEventListener('click', () => {
-        state.cart.splice(Number(button.dataset.remove), 1);
+$$('[data-cart-items], #cart-items').forEach((list) => {
+    list.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-cart-action]');
+        if (!button) return;
+
+        const index = Number(button.dataset.cartIndex);
+        const item = state.cart[index];
+        if (!item) return;
+
+        if (button.dataset.cartAction === 'remove') {
+            state.cart.splice(index, 1);
+        } else if (button.dataset.cartAction === 'increase') {
+            item.quantity += 1;
+        } else if (button.dataset.cartAction === 'decrease') {
+            item.quantity = Math.max(1, item.quantity - 1);
+        }
+
         saveCart();
         renderCart();
-    }));
-}
+    });
+});
 
 function toast(message) {
     const element = $('#toast');
@@ -68,42 +159,50 @@ function toast(message) {
     window.setTimeout(() => element.classList.remove('show'), 3000);
 }
 
-function addItem(id, name, price, color = null) {
+function addItem(id, name, price, color = null, image = null) {
     const item = state.cart.find((cartItem) => cartItem.id === Number(id) && (cartItem.color || null) === (color || null));
     if (item) {
         item.quantity += 1;
+        item.image = image || item.image || null;
     } else {
         state.cart.push({
             id: Number(id),
             name,
             color: color || null,
+            image: image || null,
             price: Number(price),
             quantity: 1
         });
     }
     saveCart();
     renderCart();
-    toast(color ? `تمت إضافة (${name} - ${color}) للسلة` : `تمت إضافة (${name}) للسلة`);
+    openCart();
 }
 
 // Add to cart buttons listener
-$$('.add-button').forEach((button) => button.addEventListener('click', (e) => {
+$$('.add-button[data-id]').forEach((button) => button.addEventListener('click', (e) => {
     e.stopPropagation();
-    addItem(button.dataset.id, button.dataset.name, button.dataset.price);
+    addItem(button.dataset.id, button.dataset.name, button.dataset.price, null, button.dataset.image);
 }));
 
-const openCartBtn = $('#open-cart');
-if (openCartBtn) {
-    openCartBtn.addEventListener('click', () => {
-        const drawer = $('#cart-drawer');
-        const backdrop = $('#backdrop');
-        if (drawer) {
-            drawer.classList.add('open');
-            drawer.setAttribute('aria-hidden', 'false');
-        }
-        if (backdrop) backdrop.classList.add('show');
-    });
+function openCart() {
+    const drawer = $('#cart-drawer');
+    const backdrop = $('#backdrop');
+    if (drawer) {
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+    }
+    if (backdrop) backdrop.classList.add('show');
 }
+
+$$('[data-open-cart]').forEach((btn) => btn.addEventListener('click', openCart));
+
+$$('[data-checkout-link]').forEach((link) => link.addEventListener('click', (event) => {
+    if (!state.cart.length) {
+        event.preventDefault();
+        toast('أضف قطعة واحدة على الأقل أولاً');
+    }
+}));
 
 function closeCart() {
     const drawer = $('#cart-drawer');
@@ -128,7 +227,8 @@ if (checkoutForm) {
         if (!state.cart.length) return toast('أضف قطعة واحدة على الأقل أولاً');
 
         const button = $('#checkout');
-        const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+        const form = event.currentTarget;
+        const fields = Object.fromEntries(new FormData(form).entries());
         button.disabled = true;
         button.textContent = 'جارٍ إرسال الطلب…';
 
@@ -151,10 +251,20 @@ if (checkoutForm) {
 
             state.cart = [];
             saveCart();
-            event.currentTarget.reset();
+            form.reset();
             renderCart();
-            closeCart();
-            toast(`تم استلام طلبك بنجاح (${result.order_number})`);
+            const success = $('#checkout-success');
+            if (success) {
+                const checkoutMain = $('#checkout-main');
+                if (checkoutMain) checkoutMain.hidden = true;
+                $('#success-order-number').textContent = result.order_number;
+                $('#success-total').textContent = money(result.total);
+                success.hidden = false;
+                success.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                closeCart();
+                toast(`تم استلام طلبك بنجاح (${result.order_number})`);
+            }
         } catch (error) {
             toast(error.message || 'تعذّر إرسال الطلب. حاول مرة أخرى.');
         } finally {
@@ -164,11 +274,68 @@ if (checkoutForm) {
     });
 }
 
+renderCart();
+
 // قسم تسعير الملفات المخصصة (Custom 3D Printing)
 const fileInput = $('#file-input');
 const dropzone = $('#dropzone');
 const materialSelect = $('#material');
 const qualitySelect = $('#quality');
+const quoteColors = $('#quote-colors');
+
+function renderQuoteColors() {
+    if (!quoteColors || !materialSelect) return;
+
+    const selectedOption = materialSelect.selectedOptions[0];
+    let colors = JSON.parse(selectedOption?.dataset.colors || '[]');
+    const hasManagedColors = selectedOption?.dataset.managedColors === '1';
+    if (!colors.length && !hasManagedColors) {
+        colors = [
+            { name: 'أخضر ليموني (Lime)', in_stock: true },
+            { name: 'أبيض ناصع (White)', in_stock: true },
+            { name: 'برتقالي (Orange)', in_stock: true },
+            { name: 'أزرق رمادي (Blue)', in_stock: true },
+        ];
+    }
+    quoteColors.replaceChildren();
+    state.selectedColor = null;
+
+    if (!colors.length) {
+        const hint = document.createElement('span');
+        hint.className = 'quote-color-hint';
+        hint.textContent = hasManagedColors ? 'نفدت ألوان هذه الخامة' : 'لا توجد ألوان محددة لهذه الخامة';
+        quoteColors.append(hint);
+        return;
+    }
+
+    colors.forEach((color) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'quote-color-option';
+        button.textContent = color.in_stock ? color.name : `${color.name} · نفد`;
+        button.disabled = !color.in_stock;
+        button.setAttribute('aria-pressed', 'false');
+
+        if (color.in_stock && state.selectedColor === null) {
+            state.selectedColor = color.name;
+            button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
+        }
+
+        button.addEventListener('click', () => {
+            quoteColors.querySelectorAll('.quote-color-option').forEach((option) => {
+                option.classList.remove('active');
+                option.setAttribute('aria-pressed', 'false');
+            });
+            button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
+            state.selectedColor = color.name;
+            calculateQuote();
+        });
+
+        quoteColors.append(button);
+    });
+}
 
 function calculateQuote() {
     if (!state.uploadedFile) return;
@@ -177,6 +344,7 @@ function calculateQuote() {
     const weight = Math.max(30, Math.round((file.size / 1024 / 1024) * 18 + 40));
 
     const selectedOption = materialSelect ? materialSelect.selectedOptions[0] : null;
+    const hasMaterial = Boolean(selectedOption?.value);
     const gramCost = selectedOption ? (Number(selectedOption.dataset.cost) || 0.75) : 0.75;
     const materialName = selectedOption ? selectedOption.dataset.name : 'PLA+';
 
@@ -189,9 +357,10 @@ function calculateQuote() {
         weight,
         gramCost,
         materialName,
-        filamentId: materialSelect ? materialSelect.value : null,
+        filamentId: hasMaterial ? materialSelect.value : null,
         price,
         hours,
+        color: state.selectedColor,
         fileName: file.name
     };
 
@@ -208,9 +377,10 @@ function calculateQuote() {
     if (customerFields) customerFields.style.display = 'block';
 
     const quoteBtn = $('#quote-button');
-    if (quoteBtn) quoteBtn.disabled = false;
+    const hasManagedColors = materialSelect?.selectedOptions[0]?.dataset.managedColors === '1';
+    if (quoteBtn) quoteBtn.disabled = !hasMaterial || (hasManagedColors && !state.selectedColor);
     const waButton = $('#quote-whatsapp-button');
-    if (waButton) waButton.style.display = 'inline-flex';
+    if (waButton) waButton.style.display = !hasMaterial || (hasManagedColors && !state.selectedColor) ? 'none' : 'inline-flex';
 }
 
 function handleFileSelection(file) {
@@ -243,22 +413,19 @@ if (dropzone) {
     });
 }
 
-if (materialSelect) materialSelect.addEventListener('change', calculateQuote);
+if (materialSelect) materialSelect.addEventListener('change', () => {
+    renderQuoteColors();
+    calculateQuote();
+});
 if (qualitySelect) qualitySelect.addEventListener('change', calculateQuote);
-
-// اختيار اللون في فورم الملفات
-$$('.swatch').forEach((swatch) => swatch.addEventListener('click', () => {
-    $$('.swatch').forEach((item) => item.classList.remove('active'));
-    swatch.classList.add('active');
-    state.selectedColor = swatch.dataset.color || 'Lime';
-}));
+renderQuoteColors();
 
 // إرسال طلب تسعير الملف المخصص للداشبورد
 const quoteForm = $('#quote-form');
 if (quoteForm) {
     quoteForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (!state.uploadedFile || !state.quote) {
+        if (!state.uploadedFile || !state.quote || !state.quote.filamentId) {
             return toast('يرجى اختيار ملف 3D أولاً.');
         }
 
@@ -287,7 +454,7 @@ if (quoteForm) {
         formData.append('phone', phone);
         formData.append('filament_id', state.quote.filamentId);
         formData.append('quality', qualitySelect ? qualitySelect.selectedOptions[0]?.textContent.trim() : 'Standard');
-        formData.append('color', state.selectedColor);
+        formData.append('color', state.selectedColor || '');
         formData.append('estimated_weight_grams', state.quote.weight);
         formData.append('original_filename', state.quote.fileName);
         formData.append('notes', notes);
@@ -306,7 +473,7 @@ if (quoteForm) {
             if (!response.ok) throw new Error(res.message || 'تعذّر إرسال الطلب.');
 
             toast(`تم استلام طلبك (${res.quote_number}) وسيتواصل معك فريق TRIO.`);
-            quoteForm.reset();
+            quoteForm?.reset();
             state.uploadedFile = null;
             state.quote = null;
             $('#quote-button').disabled = true;
@@ -314,6 +481,7 @@ if (quoteForm) {
             $('#quote-time').textContent = '—';
             $('#quote-status').textContent = 'تم الإرسال بنجاح';
             $('#file-label').textContent = 'اسحب ملفك هنا أو اضغط للاختيار';
+            renderQuoteColors();
             const customerFields = $('#quote-customer-fields');
             if (customerFields) customerFields.style.display = 'none';
         } catch (err) {
@@ -335,7 +503,7 @@ if (waBtn) {
             `أهلاً استوديو TRIO 👋\nحابب أطبع مجسم 3D مخصص:\n` +
             `• اسم الملف: ${state.quote.fileName}\n` +
             `• نوع الخامة: ${state.quote.materialName}\n` +
-            `• اللون: ${state.selectedColor}\n` +
+            `• اللون: ${state.selectedColor || 'غير محدد'}\n` +
             `• الوزن التقديري: ${state.quote.weight} جرام\n` +
             `• السعر التقديري: EGP ${state.quote.price}\n\nجاهز لإرسال الملف للمراجعة والطباعة.`
         );
@@ -343,11 +511,7 @@ if (waBtn) {
     });
 }
 
-// ثيم الإضاءة
-const themeBtn = $('.theme-button');
-if (themeBtn) {
-    themeBtn.addEventListener('click', () => document.body.classList.toggle('light'));
-}
+
 
 // تفاعلات الحركة عند التمرير
 const observer = new IntersectionObserver((items) => {
@@ -356,6 +520,23 @@ const observer = new IntersectionObserver((items) => {
     });
 }, { threshold: 0.12 });
 $$('.reveal,.reveal-delay,.reveal-delay-2').forEach((element) => observer.observe(element));
+
+// معرض صور المنتج - التبديل بين الصور
+const mainImage = $('#product-main-image');
+const galleryThumbs = $$('.gallery-thumb-btn');
+
+if (mainImage && galleryThumbs.length) {
+    galleryThumbs.forEach((thumb) => {
+        thumb.addEventListener('click', () => {
+            const fullImage = thumb.dataset.full;
+            if (fullImage) {
+                mainImage.src = fullImage;
+                galleryThumbs.forEach((t) => t.classList.remove('active'));
+                thumb.classList.add('active');
+            }
+        });
+    });
+}
 
 // التهيئة عند فتح الصفحة
 renderCart();

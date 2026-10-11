@@ -10,28 +10,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('trio.css') }}" />
-    <link rel="stylesheet" href="{{ asset('store-overrides.css') }}" />
+    <link rel="stylesheet" href="@assetv('trio.css')" />
+    <link rel="stylesheet" href="@assetv('store-overrides.css')" />
   </head>
   <body>
     <div class="noise"></div>
     <div class="glow glow-a"></div><div class="glow glow-b"></div>
 
-    <header class="site-header">
-      <a class="brand" href="{{ route('storefront') }}" aria-label="TRIO homepage">
-        <span class="brand-mark"><i></i><i></i><i></i></span><span>TRIO</span>
-      </a>
-      <nav class="nav-links" aria-label="التنقل الرئيسي">
-        <a href="#top">الرئيسية</a>
-        <a href="{{ route('catalog.index') }}" style="color:var(--lime);">المتجر والكتالوج</a>
-        <a href="#custom">اطبع فكرتك</a>
-        <a href="#about">فكرة TRIO</a>
-      </nav>
-      <div class="header-actions">
-        <button class="icon-button theme-button" aria-label="تبديل المظهر"><span>☼</span></button>
-        <button class="cart-button" id="open-cart"><span class="cart-count" id="cart-count">0</span><span>سلة الطلبات</span><span class="arrow">↙</span></button>
-      </div>
-    </header>
+    @include('partials.store-header', ['activeNav' => 'home'])
 
     <main id="top">
       <section class="hero">
@@ -41,9 +27,8 @@
           <p>TRIO هو استوديو طباعة ثلاثية الأبعاد بنصمّم، نطبع، وننجز القطع التي كانت لسه مجرد فكرة عندك.</p>
           <div class="hero-actions">
             <a class="button button-primary" href="{{ route('catalog.index') }}">تصفح الكتالوج الكامل <span>↙</span></a>
-            <a class="button button-quiet" href="#custom">ارفع تصميمك <span>↑</span></a>
           </div>
-          <div class="hero-meta"><span><b>01</b> تصميم</span><span><b>02</b> طباعة</span><span><b>03</b> توصيل</span></div>
+          <div class="hero-meta"><span>تصميم</span><span>طباعة</span><span>توصيل</span></div>
         </div>
         <div class="hero-art reveal-delay">
           <div class="trio-printer-chamber">
@@ -97,16 +82,6 @@
                   <feGaussianBlur stdDeviation="5" result="blur" />
                   <feMerge>
                     <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-
-                <filter id="laserSparkGlow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="blur1" />
-                  <feGaussianBlur stdDeviation="8" result="blur2" />
-                  <feMerge>
-                    <feMergeNode in="blur2" />
-                    <feMergeNode in="blur1" />
                     <feMergeNode in="SourceGraphic" />
                   </feMerge>
                 </filter>
@@ -199,15 +174,14 @@
                       stroke="#c8f228" stroke-width="1.2" opacity="0.85" />
               </g>
 
-              <!-- جسر المحور الأفقي المتحرك X-Gantry (يتحرك رأسياً حسب Z) -->
+              <!-- المحور الأفقي ورأس الطباعة مثبتان معًا على حامل واحد -->
               <g class="anim-gantry">
                 <!-- قضيبين من ألياف الكربون Dual Carbon Rods -->
                 <rect x="42" y="80" width="396" height="7" rx="3" fill="url(#carbonGantry)" stroke="#3a4f5b" stroke-width="0.8" />
                 <rect x="42" y="94" width="396" height="7" rx="3" fill="url(#carbonGantry)" stroke="#3a4f5b" stroke-width="0.8" />
-              </g>
 
-              <!-- رأس الطباعة الذكي عالي السرعة (Toolhead / Extruder) يتحرك بسلاسة أثناء الطباعة -->
-              <g class="anim-toolhead">
+              <!-- رأس الطباعة ثابت على منتصف المحور، بلا حركة جانبية منفصلة -->
+              <g transform="translate(240 145)">
                 <!-- أنبوب تغذية الفيلمنت PTFE Bowden Tube مرن يمتد من الأعلى -->
                 <path d="M 0 -80 C 15 -40, 20 -15, 0 0" stroke="#38bdf8" stroke-width="2.5" fill="none" opacity="0.8" stroke-linecap="round" />
                 <path d="M -5 -75 C 5 -35, 12 -12, -4 0" stroke="#c8f228" stroke-width="1.2" fill="none" opacity="0.9" />
@@ -232,9 +206,7 @@
                 <!-- فوهة الطباعة النحاسية الدقيقة (Brass Nozzle 0.4mm) -->
                 <polygon points="-6,62 6,62 2,72 -2,72" fill="url(#nozzleGrad)" />
 
-                <!-- نقطة صهر الفيلمنت وترسيب البلاستيك النشط (Extrusion Plasma Spark) -->
-                <circle class="anim-spark" cx="0" cy="74" r="3.5" fill="#c8f228" filter="url(#laserSparkGlow)" />
-                <line x1="0" y1="74" x2="0" y2="82" stroke="#c8f228" stroke-width="2" stroke-linecap="round" opacity="0.9" filter="url(#neonGlow)" />
+              </g>
               </g>
             </svg>
 
@@ -274,8 +246,6 @@
             </div>
           </div>
 
-          <!-- إحصائية الدقة بجوار الطابعة -->
-          <div class="hero-stat"><b>0.16</b><span>mm<br/>precision</span></div>
         </div>
         <div class="scroll-cue"><span></span> اكتشف TRIO</div>
       </section>
@@ -289,31 +259,34 @@
             <span class="kicker">01 / FEATURED DROPS</span>
             <h2>قطع مختارة.<br/><em>فرق كبير.</em></h2>
           </div>
-          <div style="display:flex; gap:14px; align-items:center;">
-            <!-- أسهم التنقل بالسلايدر -->
-            <div style="display:flex; gap:8px;">
-              <button type="button" id="carousel-prev" class="carousel-arrow" title="السابق">→</button>
-              <button type="button" id="carousel-next" class="carousel-arrow" title="التالي">←</button>
-            </div>
+          <div>
             <a href="{{ route('catalog.index') }}" class="button button-quiet" style="padding:10px 18px; font-size:11px;">
               عرض كل المنتجات ({{ $products->count() }}) ↗
             </a>
           </div>
         </div>
 
-        <div style="position:relative; overflow:hidden;">
-          <div class="product-carousel-track" id="product-carousel" style="display:flex; gap:20px; overflow-x:auto; scroll-behavior:smooth; scroll-snap-type:x mandatory; padding:15px 4px 25px 4px;">
-            @php($visuals = ['stand', 'headphone', 'planters'])
+        <div class="product-carousel-shell">
+          <button type="button" id="carousel-prev" class="carousel-arrow carousel-arrow-prev" title="المنتجات السابقة" aria-label="المنتجات السابقة">→</button>
+          <div class="product-carousel-track" id="product-carousel">
+            @php
+              $visuals = ['stand', 'headphone', 'planters'];
+            @endphp
             @forelse($products as $product)
-              <article class="product-card product-{{ ['lime', 'blue', 'dark'][$loop->index % 3] }}" 
-                       style="flex: 0 0 min(330px, 85vw); height:450px; scroll-snap-align: start;">
+              @php
+                $inventoryColors = $product->filament?->colorInventory() ?? [];
+                $hasManagedInventory = $product->filament?->hasManagedColorInventory() ?? false;
+                $isOutOfStock = ($product->filament && ! $product->filament->is_active)
+                  || ($hasManagedInventory && ! collect($inventoryColors)->contains(fn ($color) => $color['in_stock']));
+              @endphp
+              <article class="product-card product-{{ ['lime', 'blue', 'dark'][$loop->index % 3] }}">
                 <div class="product-tag">{{ $product->filament?->name ?? 'TRIO PRODUCT' }}</div>
 
                 <!-- رابط مباشر لصفحة تفاصيل المنتج المنفصلة -->
                 <a href="{{ route('catalog.show', $product) }}" style="position:absolute; inset:0; z-index:1;" aria-label="عرض تفاصيل {{ $product->name }}"></a>
 
                 @if($product->image_path)
-                  <img class="product-uploaded-image" src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->name }}" />
+                  <img class="product-uploaded-image" src="@sasset($product->image_path)" alt="{{ $product->name }}" />
                 @else
                   <div class="product-visual {{ $visuals[$loop->index % 3] }}"><span></span><i></i><b></b></div>
                 @endif
@@ -329,146 +302,47 @@
                   <strong style="font-size:14px;">EGP {{ number_format((float) $product->price, 2) }}</strong>
                 </div>
 
-                <button class="add-button" style="z-index:3;" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}">
-                  أضف للسلة <span>+</span>
-                </button>
+                @if($isOutOfStock)
+                  <button class="add-button" style="z-index:3;" disabled>نفد المخزون</button>
+                @elseif($hasManagedInventory)
+                  <a class="add-button" style="z-index:3;" href="{{ route('catalog.show', $product) }}">اختار اللون <span>↗</span></a>
+                @else
+                  <button class="add-button" style="z-index:3;" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->price }}" data-image="@if($product->coverImage())@sasset($product->coverImage())@endif">
+                    أضف للسلة <span>+</span>
+                  </button>
+                @endif
               </article>
             @empty
               <div class="empty-products">قريبًا: أول منتجات TRIO.</div>
             @endforelse
           </div>
+          <button type="button" id="carousel-next" class="carousel-arrow carousel-arrow-next" title="المنتجات التالية" aria-label="المنتجات التالية">←</button>
         </div>
       </section>
 
-      <!-- قسم اطبع فكرتك -->
-      <section class="custom section" id="custom">
-        <div class="custom-grid">
-          <div class="custom-copy reveal"><span class="kicker">02 / YOUR FILE, OUR CRAFT</span><h2>عندك ملف 3D؟<br/><em>خلّيه حقيقة.</em></h2><p>ارفع ملف الـ STL أو 3MF، اختر نوع الخامة واللون، واحصل على تقدير فوري للسعر. نراجع كل ملف هندسيًا قبل الطباعة.</p>
-            <ul class="feature-list">
-              <li><span>✓</span> دعم ملفات STL و 3MF حتى 100MB</li>
-              <li><span>✓</span> خامات متعددة: PLA+, PETG, TPU</li>
-              <li><span>✓</span> مراجعة بشرية ودعم عبر واتساب</li>
-            </ul>
-          </div>
-          <form class="quote-card reveal-delay" id="quote-form">
-            <div class="quote-top"><span>INSTANT ESTIMATE</span><i id="quote-status">جاهز للتسعير</i></div>
-            <label class="dropzone" id="dropzone" for="file-input">
-              <input id="file-input" type="file" accept=".stl,.3mf,.zip" hidden />
-              <span class="upload-icon">↑</span>
-              <b id="file-label">اسحب ملفك هنا أو اضغط للاختيار</b>
-              <small>ملفات STL, 3MF أو ZIP · حد أقصى 100 MB</small>
-            </label>
-
-            <div class="quote-options">
-              <label>نوع الخامة
-                <select id="material">
-                  @forelse($filaments as $fil)
-                    <option value="{{ $fil->id }}" data-cost="{{ $fil->cost_per_gram }}" data-name="{{ $fil->name }}">
-                      {{ $fil->name }}
-                    </option>
-                  @empty
-                    <option value="" data-cost="0.75" data-name="PLA+">PLA+ قياسي</option>
-                  @endforelse
-                </select>
-              </label>
-              <label>دقة الطباعة
-                <select id="quality">
-                  <option value="1">Standard — 0.20mm</option>
-                  <option value="1.25">Fine — 0.12mm (أعلى دقة)</option>
-                </select>
-              </label>
-            </div>
-
-            <div class="color-row">
-              <span>لون القطعة</span>
-              <div class="swatches">
-                <button class="swatch active" data-color="أخضر ليموني (Lime)" type="button" title="Lime"></button>
-                <button class="swatch white" data-color="أبيض ناصع (White)" type="button" title="White"></button>
-                <button class="swatch orange" data-color="برتقالي (Orange)" type="button" title="Orange"></button>
-                <button class="swatch blue" data-color="أزرق رمادي (Blue)" type="button" title="Blue"></button>
-              </div>
-            </div>
-
-            <!-- بيانات التواصل لطلب التسعير الفعلي -->
-            <div id="quote-customer-fields" style="display:none; padding-top:14px; border-top:1px solid var(--line); margin-top:10px;">
-              <p style="font-size:11px; color:var(--lime); margin:0 0 8px;">بيانات التواصل لمراجعة طلبك:</p>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                <label style="font-size:10px; color:#9aabb0;">اسمك
-                  <input type="text" id="quote-name" placeholder="الاسم ثلاثي" style="width:100%; background:#102029; border:1px solid #243842; color:#dce6e7; padding:8px; font-size:11px; margin-top:4px;" />
-                </label>
-                <label style="font-size:10px; color:#9aabb0;">رقم الموبايل
-                  <input type="tel" id="quote-phone" placeholder="01012345678" style="width:100%; background:#102029; border:1px solid #243842; color:#dce6e7; padding:8px; font-size:11px; margin-top:4px;" />
-                </label>
-              </div>
-              <label style="font-size:10px; color:#9aabb0; display:block; margin-top:8px;">ملاحظات إضافية (اختياري)
-                <textarea id="quote-notes" rows="2" placeholder="أي تفاصيل عن الاستخدام أو الكثافة (Infill)" style="width:100%; background:#102029; border:1px solid #243842; color:#dce6e7; padding:8px; font-size:11px; margin-top:4px; resize:none;"></textarea>
-              </label>
-            </div>
-
-            <div class="estimate">
-              <div><span>تقدير السعر المبدئي</span><strong id="quote-price">—</strong></div>
-              <div><span>الوقت المتوقع</span><strong id="quote-time">—</strong></div>
-              <div style="display:flex; flex-direction:column; gap:6px;">
-                <button type="submit" class="button button-primary" id="quote-button" disabled style="padding:10px 12px; font-size:11px; justify-content:center;">
-                  إرسال الطلب للاستوديو <span>↙</span>
-                </button>
-                <button type="button" class="button button-quiet" id="quote-whatsapp-button" style="display:none; padding:8px 10px; font-size:10px; justify-content:center; border-color:#25d366; color:#25d366;">
-                  طلب عبر واتساب 💬
-                </button>
-              </div>
-            </div>
-          </form>
+      <section class="custom-print-promo section">
+        <div>
+          <span class="kicker">YOUR FILE, OUR CRAFT</span>
+          <h2>عندك فكرة 3D؟<br/><em>خلّيها حقيقة.</em></h2>
+          <p>ارفع تصميمك، اختار الخامة واللون، وخد تقدير مبدئي للسعر.</p>
+        </div>
+        <div class="custom-print-promo-actions">
+          <a class="button button-primary" href="{{ route('custom_print.create') }}">اطبع فكرتك <span>↗</span></a>
+          <a class="button button-quiet" href="{{ route('catalog.index') }}">تصفح المنتجات <span>↗</span></a>
         </div>
       </section>
 
       <section class="process section" id="about">
         <div class="process-intro reveal"><span class="kicker">03 / THE TRIO METHOD</span><h2>ثلاثة أدوار.<br/><em>نتيجة واحدة متقنة.</em></h2></div>
-        <div class="steps"><article class="step reveal"><span>01</span><div class="step-symbol design-symbol">✦</div><h3>نصمّم</h3><p>نحوّل الفكرة لرسم مدروس يناسب الاستخدام اليومي.</p></article><article class="step reveal-delay"><span>02</span><div class="step-symbol print-symbol"><i></i><i></i><i></i></div><h3>نطبع</h3><p>نعاير كل طبقة علشان الجودة ما تكونش صدفة.</p></article><article class="step reveal-delay-2"><span>03</span><div class="step-symbol finish-symbol">↗</div><h3>نكمّل</h3><p>تنظيف، تشطيب، وتغليف محترم لحد ما توصلك.</p></article></div>
+        <div class="steps"><article class="step reveal"><div class="step-symbol design-symbol">✦</div><h3>نصمّم</h3><p>نحوّل الفكرة لرسم مدروس يناسب الاستخدام اليومي.</p></article><article class="step reveal-delay"><div class="step-symbol print-symbol"><i></i><i></i><i></i></div><h3>نطبع</h3><p>نعاير كل طبقة علشان الجودة ما تكونش صدفة.</p></article><article class="step reveal-delay-2"><div class="step-symbol finish-symbol">↗</div><h3>نكمّل</h3><p>تنظيف، تشطيب، وتغليف محترم لحد ما توصلك.</p></article></div>
       </section>
 
     </main>
 
-    <footer>
-      <div class="footer-mark"><span class="brand-mark"><i></i><i></i><i></i></span>TRIO</div>
-      <p>ثلاثة أصدقاء يصنعون أشياء أفضل.</p>
-      <div style="display:flex; gap:16px; align-items:center;">
-        <span>© 2026 TRIO 3D PRINTING</span>
-        <a href="{{ route('admin.login') }}" style="color:rgba(255,255,255,0.18); font-size:10px; text-decoration:none;">لوحة الإدارة</a>
-      </div>
-    </footer>
+    @include('partials.store-footer')
 
     <!-- سلة الطلبات -->
-    <aside class="cart-drawer" id="cart-drawer" aria-hidden="true">
-      <div class="drawer-head">
-        <div><span class="kicker">YOUR BUILD</span><h3>سلة الطلبات</h3></div>
-        <button id="close-cart">×</button>
-      </div>
-      <div class="cart-items" id="cart-items">
-        <div class="empty-cart"><span>◌</span><p>لسه مفيش حاجة في السلة.</p></div>
-      </div>
-      <form id="checkout-form" class="checkout-form">
-        <label>الاسم بالكامل
-          <input name="customer_name" required autocomplete="name" placeholder="محمد أحمد" />
-        </label>
-        <label>رقم الموبايل
-          <input name="phone" required autocomplete="tel" inputmode="tel" placeholder="01012345678" pattern="(\+?20|0)?1[0125][0-9]{8}" title="رقم هاتف مصري يبدأ بـ 01" />
-        </label>
-        <label>عنوان التوصيل بالتفصيل
-          <input name="address" required autocomplete="street-address" placeholder="المحافظة، المدينة، اسم الشارع ورقم العمارة" />
-        </label>
-        <label>البريد الإلكتروني <small>اختياري</small>
-          <input name="email" type="email" autocomplete="email" placeholder="name@example.com" />
-        </label>
-        <label>ملاحظات إضافية <small>اختياري</small>
-          <textarea name="notes" rows="2" placeholder="أي تعليمات للتوصيل أو مواصفات خاصة"></textarea>
-        </label>
-        <p class="checkout-note">الدفع عند الاستلام أو فودافون كاش بعد تأكيد الطلب معك.</p>
-        <div class="cart-footer">
-          <p>الإجمالي <strong id="cart-total">EGP 0</strong></p>
-          <button class="button button-primary" id="checkout" type="submit">تأكيد وإرسال الطلب <span>↙</span></button>
-        </div>
-      </form>
-    </aside>
+    @include('partials.cart-popup')
 
     <div class="backdrop" id="backdrop"></div>
     <div class="toast" id="toast">تمت إضافة القطعة للسلة <span>✓</span></div>
@@ -476,12 +350,11 @@
     <script>
       window.TRIO_CONFIG = {
         orderUrl: @json(route('orders.store')),
-        quoteUrl: @json(route('custom_quotes.store')),
         csrf: @json(csrf_token()),
         whatsappPhone: '{{ config('app.whatsapp_phone', '201282537892') }}'
       };
     </script>
-    <script src="{{ asset('trio.js') }}"></script>
+    <script src="@assetv('trio.js')"></script>
     <script>
       // تفاعل سلايدر المنتجات (Carousel Navigation)
       const carousel = document.getElementById('product-carousel');
